@@ -133,7 +133,13 @@ module Terminal
       @headings.each do |row|
         unless row.cells.empty?
           buffer << row
-          buffer << Separator.new(self, border_type: :double, implicit: true)
+
+          if style.border.is_a?(MarkdownBorder)
+            buffer << MarkdownHeaderSeparator.new(self, implicit: true)
+          else
+            buffer << Separator.new(self, border_type: :double, implicit: true)
+          end
+
         end
       end
       if style.all_separators
@@ -158,7 +164,7 @@ module Terminal
           r.save_adjacent_rows(prev_row, next_row)
         end
       end
-      
+
       @elaborated = true
       @rows = buffer
     end
