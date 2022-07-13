@@ -11,7 +11,7 @@ module Terminal
       #
       # `implicit` is false for user-added separators, and true for
       # implicit/auto-generated separators.
-      
+
       def initialize(*args, border_type: :div, implicit: false)
         super
         @prevrow, @nextrow = nil, nil
@@ -21,10 +21,10 @@ module Terminal
 
       attr_accessor :border_type
       attr_reader :implicit
-      
+
       def render
         left_edge, ctrflat, ctrud, right_edge, ctrdn, ctrup = @table.style.horizontal(border_type)
-        
+
         prev_crossings = @prevrow.respond_to?(:crossings) ? @prevrow.crossings : []
         next_crossings = @nextrow.respond_to?(:crossings) ? @nextrow.crossings : []
         rval = [left_edge]
@@ -49,7 +49,7 @@ module Terminal
                           end
           rval << border_center if idx < numcols-1
         end
-          
+
         rval << right_edge
         rval.join
       end
@@ -60,7 +60,56 @@ module Terminal
         @prevrow = prevrow
         @nextrow = nextrow
       end
-      
+
+    end
+
+    class MarkdownHeaderSeparator < Separator
+      def render
+        left_edge, ctrflat, ctrud, right_edge, ctrdn, ctrup = @table.style.horizontal(border_type)
+        alignment_mark = ':'
+        heading_alignments = @table.headings.first.cells.map { _1.alignment }
+        prev_crossings = @prevrow.respond_to?(:crossings) ? @prevrow.crossings : []
+        next_crossings = @nextrow.respond_to?(:crossings) ? @nextrow.crossings : []
+        rval = [left_edge]
+        numcols = @table.number_of_columns
+        (0...numcols).each do |idx|
+          heading_alignment = heading_alignments[idx]
+          alignment_mark_slots = 0
+          alignment_mark_slots = 2 if heading_alignment == :center
+          alignment_mark_slots = 1 if heading_alignment == :right
+
+          if heading_alignment == :center
+            rval << alignment_mark
+          end
+
+          rval << ctrflat * (@table.column_width(idx) + @table.cell_padding - alignment_mark_slots)
+
+          if %i[center right].include?(heading_alignment)
+            rval << alignment_mark
+          end
+
+          pcinc = prev_crossings.include?(idx+1)
+          ncinc = next_crossings.include?(idx+1)
+          border_center = if pcinc && ncinc
+                            ctrud
+                          elsif pcinc
+                            ctrup
+                          elsif ncinc
+                            ctrdn
+                          elsif !ctrud.empty?
+                            # special case if the center-up-down intersection is empty
+                            # which happens when verticals/intersections are removed. in that case
+                            # we do not want to replace with a flat element so return empty-string in else block
+                            ctrflat
+                          else
+                            ''
+                          end
+          rval << border_center if idx < numcols-1
+        end
+
+        rval << right_edge
+        rval.join
+      end
     end
   end
 end
